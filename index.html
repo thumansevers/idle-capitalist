@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>💰 资本家模拟器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- 顶部资源栏 -->
+        <header class="resource-bar">
+            <div class="money-display">
+                <span class="money-icon">💰</span>
+                <span id="moneyValue" class="money-value">0</span>
+            </div>
+            <div class="multiplier-display">
+                <span class="mult-icon">📈</span>
+                <span id="multiplierValue" class="mult-value">x1.0</span>
+            </div>
+        </header>
+
+        <!-- 星球导航 -->
+        <nav class="planet-nav">
+            <button class="planet-btn active" data-planet="earth">
+                <span class="planet-icon">🌍</span>
+                <span class="planet-name">地球</span>
+            </button>
+            <button class="planet-btn locked" data-planet="moon">
+                <span class="planet-icon">🌙</span>
+                <span class="planet-name">月球</span>
+            </button>
+            <button class="planet-btn locked" data-planet="mars">
+                <span class="planet-icon">🔴</span>
+                <span class="planet-name">火星</span>
+            </button>
+        </nav>
+
+        <!-- 主游戏区 -->
+        <main class="game-area">
+            <div id="businessList" class="business-list">
+                <!-- 动态生成赚钱项目 -->
+            </div>
+        </main>
+
+        <!-- 底部操作栏 -->
+        <footer class="action-bar">
+            <button id="btnPrestige" class="prestige-btn">
+                <span class="prestige-icon">🔄</span>
+                <span class="prestige-text">重置宇宙</span>
+                <span id="prestigeBonus" class="prestige-bonus">+0%</span>
+            </button>
+            <button id="btnUpgrades" class="upgrade-btn">
+                <span class="upgrade-icon">⚡</span>
+                <span class="upgrade-text">升级</span>
+            </button>
+            <button id="btnSettings" class="settings-btn">
+                <span class="settings-icon">⚙️</span>
+                <span class="settings-text">设置</span>
+            </button>
+        </footer>
+
+        <!-- 升级面板 -->
+        <div id="upgradePanel" class="panel hidden">
+            <div class="panel-header">
+                <h2>⚡ 升级商店</h2>
+                <button class="close-btn" data-panel="upgradePanel">×</button>
+            </div>
+            <div id="upgradeList" class="upgrade-list">
+                <!-- 动态生成升级项 -->
+            </div>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settingsPanel" class="panel hidden">
+            <div class="panel-header">
+                <h2>⚙️ 设置</h2>
+                <button class="close-btn" data-panel="settingsPanel">×</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-item">
+                    <label>音效</label>
+                    <input type="checkbox" id="toggleSound" checked>
+                </div>
+                <div class="setting-item">
+                    <label>离线收益</label>
+                    <input type="checkbox" id="toggleOffline" checked>
+                </div>
+                <div class="stat-display">
+                    <h3>游戏统计</h3>
+                    <p>游戏时间：<span id="statPlayTime">0 小时</span></p>
+                    <p>重置次数：<span id="statPrestigeCount">0</span></p>
+                    <p>总赚取：<span id="statTotalEarned">💰0</span></p>
+                </div>
+                <button id="btnHardReset" class="hard-reset-btn">🗑️ 硬重置 (清除所有存档)</button>
+            </div>
+        </div>
+
+        <!-- 重置确认面板 -->
+        <div id="prestigePanel" class="panel hidden">
+            <div class="panel-header">
+                <h2>🔄 重置宇宙</h2>
+                <button class="close-btn" data-panel="prestigePanel">×</button>
+            </div>
+            <div class="prestige-content">
+                <p class="prestige-warning">⚠️ 重置将失去所有金钱和建筑等级</p>
+                <p class="prestige-gain">获得倍率：<span id="prestigeGain" class="gain-value">x1.0</span></p>
+                <p class="prestige-current">当前倍率：<span id="prestigeCurrent" class="current-value">x1.0</span></p>
+                <button id="btnConfirmPrestige" class="confirm-prestige-btn">确认重置</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
