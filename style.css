@@ -311,11 +311,36 @@ body {
 .prestige-icon { font-size: 20px; margin-bottom: 4px; }
 .upgrade-icon { font-size: 20px; margin-bottom: 4px; }
 .settings-icon { font-size: 20px; margin-bottom: 4px; }
+.mult-toggle-icon { font-size: 20px; margin-bottom: 4px; }
 
 .prestige-bonus {
     color: var(--success);
     font-size: 10px;
     margin-top: 2px;
+}
+
+.mult-toggle-value {
+    color: var(--primary);
+    font-size: 10px;
+    margin-top: 2px;
+    font-weight: 700;
+}
+
+/* 倍率切换按钮特殊样式 */
+.mult-toggle-btn {
+    border-color: var(--info);
+}
+
+/* 阶段奖励徽章 */
+.milestone-badge {
+    padding: 6px 10px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--primary);
+    margin-bottom: 8px;
+    text-align: center;
 }
 
 /* 面板 */

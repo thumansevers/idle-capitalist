@@ -66,6 +66,7 @@ class IdleGame {
         this.clickPower = 1;
         this.globalMultiplier = 1;
         this.planetMultipliers = { earth: 1, moon: 1, mars: 1 };
+        this.buyMultiplier = 1; // 购买倍率：1, 10, 100, max
 
         this.init();
     }
@@ -201,6 +202,11 @@ class IdleGame {
         document.querySelector('.money-display').addEventListener('click', (e) => {
             this.handleClick(e);
         });
+
+        // 购买倍率切换
+        document.getElementById('btnBuyMult').addEventListener('click', () => {
+            this.toggleBuyMultiplier();
+        });
     }
 
     // 切换星球
@@ -220,11 +226,26 @@ class IdleGame {
         const container = document.getElementById('businessList');
         const businesses = this.businessConfig[this.currentPlanet] || [];
 
+        // 更新购买倍率按钮显示
+        const buyMultDisplay = this.buyMultiplier === 'max' ? 'MAX' : 'x' + this.buyMultiplier;
+        const buyMultBtn = document.getElementById('buyMultValue');
+        if (buyMultBtn) buyMultBtn.textContent = buyMultDisplay;
+
         container.innerHTML = businesses.map(biz => {
             const bizState = this.state.businesses[biz.id] || { level: 0, totalEarned: 0 };
-            const cost = this.calculateCost(biz);
+            const buyCount = this.buyMultiplier === 'max' ? this.calculateMaxBuyable(biz) : this.buyMultiplier;
+            const totalCost = this.calculateBulkCost(biz, buyCount);
             const earnPerCycle = this.calculateEarnPerCycle(biz);
+            const earnPerSec = this.calculateEarnPerSec(biz);
             const progress = this.businessProgress[biz.id] || 0;
+            const milestoneMult = this.getMilestoneMultiplier(bizState);
+            const timeReduct = this.getMilestoneTimeReduction(biz);
+
+            // 阶段奖励显示
+            let milestoneText = '';
+            if (bizState.level >= 1000) milestoneText = '🏆 1000 个 x3 收益 x0.5 时间';
+            else if (bizState.level >= 100) milestoneText = '💎 100 个 x2 收益 x0.7 时间';
+            else if (bizState.level >= 10) milestoneText = '⭐ 10 个 x1.5 收益 x0.8 时间';
 
             return `
                 <div class="business-card" data-business="${biz.id}">
@@ -235,9 +256,10 @@ class IdleGame {
                         </div>
                         <span class="business-level">Lv.${bizState.level}</span>
                     </div>
+                    ${milestoneText ? `<div class="milestone-badge">${milestoneText}</div>` : ''}
                     <div class="business-stats">
                         <span>每次：${this.formatNumber(earnPerCycle)}$</span>
-                        <span class="earn-rate">${this.formatNumber(this.calculateEarnPerSec(biz))}$/秒</span>
+                        <span class="earn-rate">${this.formatNumber(earnPerSec)}$/秒</span>
                     </div>
                     <div class="progress-container">
                         <div class="progress-bar">
@@ -245,9 +267,9 @@ class IdleGame {
                             <span class="progress-text">${(progress).toFixed(0)}%</span>
                         </div>
                     </div>
-                    <button class="buy-btn" onclick="game.buyBusiness('${biz.id}')" ${this.state.money < cost ? 'disabled' : ''}>
-                        <span>购买 #${bizState.level + 1}</span>
-                        <span class="buy-cost">${this.formatNumber(cost)}$</span>
+                    <button class="buy-btn" onclick="game.buyBusiness('${biz.id}')" ${this.state.money < totalCost || buyCount <= 0 ? 'disabled' : ''}>
+                        <span>购买 ${buyCount === 0 ? '0' : (this.buyMultiplier === 'max' ? 'ALL' : 'x' + buyCount)}</span>
+                        <span class="buy-cost">${this.formatNumber(totalCost)}$</span>
                     </button>
                 </div>
             `;
@@ -285,31 +307,91 @@ class IdleGame {
         return Math.floor(biz.baseCost * Math.pow(1.15, bizState.level));
     }
 
+    // 计算阶段倍率（每 10/100 个增强）
+    getMilestoneMultiplier(bizState) {
+        const level = bizState.level || 0;
+        let mult = 1;
+        if (level >= 10) mult *= 1.5;    // 10 个 x1.5
+        if (level >= 100) mult *= 2;     // 100 个 x2
+        if (level >= 1000) mult *= 3;    // 1000 个 x3
+        return mult;
+    }
+
+    // 计算阶段时间缩减
+    getMilestoneTimeReduction(biz) {
+        const bizState = this.state.businesses[biz.id] || { level: 0 };
+        const level = bizState.level || 0;
+        let reduction = 1;
+        if (level >= 10) reduction *= 0.8;   // 10 个 时间 -20%
+        if (level >= 100) reduction *= 0.7;  // 100 个 时间 -30%
+        if (level >= 1000) reduction *= 0.5; // 1000 个 时间 -50%
+        return Math.max(0.1, reduction);
+    }
+
     // 计算每次收益
     calculateEarnPerCycle(biz) {
         const bizState = this.state.businesses[biz.id] || { level: 0 };
         const planetMultiplier = this.planetMultipliers[this.currentPlanet] || 1;
+        const milestoneMult = this.getMilestoneMultiplier(bizState);
         
-        return biz.baseEarn * bizState.level * planetMultiplier * this.globalMultiplier * this.state.prestigeMultiplier;
+        return biz.baseEarn * bizState.level * planetMultiplier * this.globalMultiplier * this.state.prestigeMultiplier * milestoneMult;
     }
 
     // 计算每秒收益
     calculateEarnPerSec(biz) {
-        return this.calculateEarnPerCycle(biz) / (biz.baseTime / 1000);
+        const bizState = this.state.businesses[biz.id] || { level: 0 };
+        const timeReduction = this.getMilestoneTimeReduction(biz);
+        const effectiveTime = biz.baseTime * timeReduction;
+        return this.calculateEarnPerCycle(biz) / (effectiveTime / 1000);
+    }
+
+    // 获取实际周期时间（毫秒）
+    getActualTime(biz) {
+        const timeReduction = this.getMilestoneTimeReduction(biz);
+        return biz.baseTime * timeReduction;
+    }
+
+    // 计算购买 N 个的总成本
+    calculateBulkCost(biz, count) {
+        const bizState = this.state.businesses[biz.id] || { level: 0 };
+        let totalCost = 0;
+        for (let i = 0; i < count; i++) {
+            totalCost += Math.floor(biz.baseCost * Math.pow(1.15, bizState.level + i));
+        }
+        return totalCost;
+    }
+
+    // 计算最大可购买数量
+    calculateMaxBuyable(biz) {
+        const bizState = this.state.businesses[biz.id] || { level: 0 };
+        let count = 0;
+        let cost = 0;
+        while (true) {
+            const nextCost = Math.floor(biz.baseCost * Math.pow(1.15, bizState.level + count));
+            if (cost + nextCost > this.state.money) break;
+            cost += nextCost;
+            count++;
+            if (count > 10000) break; // 防止死循环
+        }
+        return count;
     }
 
     // 购买建筑
     buyBusiness(bizId) {
         const biz = this.businessConfig[this.currentPlanet].find(b => b.id === bizId);
-        const cost = this.calculateCost(biz);
+        const buyCount = this.buyMultiplier === 'max' ? this.calculateMaxBuyable(biz) : this.buyMultiplier;
+        
+        if (buyCount <= 0) return;
+        
+        const totalCost = this.calculateBulkCost(biz, buyCount);
 
-        if (this.state.money >= cost) {
-            this.state.money -= cost;
+        if (this.state.money >= totalCost) {
+            this.state.money -= totalCost;
             
             if (!this.state.businesses[bizId]) {
                 this.state.businesses[bizId] = { level: 0, totalEarned: 0 };
             }
-            this.state.businesses[bizId].level++;
+            this.state.businesses[bizId].level += buyCount;
 
             // 检查解锁新星球
             this.checkPlanetUnlock();
@@ -318,7 +400,20 @@ class IdleGame {
             this.renderBusinesses();
             this.updateDisplay();
             this.saveState();
+            
+            if (buyCount > 1) {
+                this.showToast(`购买 x${buyCount}！`);
+            }
         }
+    }
+
+    // 切换购买倍率
+    toggleBuyMultiplier() {
+        const options = [1, 10, 100, 'max'];
+        const currentIndex = options.indexOf(this.buyMultiplier);
+        this.buyMultiplier = options[(currentIndex + 1) % options.length];
+        this.renderBusinesses();
+        this.showToast(`购买倍率：${this.buyMultiplier === 'max' ? 'MAX' : 'x' + this.buyMultiplier}`);
     }
 
     // 购买升级
@@ -446,7 +541,9 @@ class IdleGame {
                 this.businessProgress[biz.id] = 0;
             }
 
-            const progressPerTick = (delta / biz.baseTime) * 100;
+            // 使用实际周期时间（含阶段缩减）
+            const actualTime = this.getActualTime(biz);
+            const progressPerTick = (delta / actualTime) * 100;
             this.businessProgress[biz.id] += progressPerTick;
 
             // 完成一个周期
